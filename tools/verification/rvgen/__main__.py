@@ -8,6 +8,7 @@
 # For further information, see:
 #   Documentation/trace/rv/da_monitor_synthesis.rst
 
+# this calls all the other files
 if __name__ == '__main__':
     from rvgen.dot2k import dot2k
     from rvgen.generator import Monitor
