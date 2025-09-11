@@ -34,11 +34,36 @@ EXPORT_SYMBOL_GPL(kdb_poll_idx);
 
 static struct kgdb_state *kdb_ks;
 
+/* helpful notes: nr_cpu_ids and cpu_online() come from <linux/cpumask.h>/<linux/cpu.h>
 int kdb_common_init_state(struct kgdb_state *ks)
 {
+	if (!ks) {
+		pr_warn("kdb: kdb_common_init_state called with NULL ks\n");
+		return -EINVAL;
+	}
+
+	/* kdb_initial_cpu records whether kgdb was active at entry */
 	kdb_initial_cpu = atomic_read(&kgdb_active);
-	kdb_current_task = kgdb_info[ks->cpu].task;
-	kdb_current_regs = kgdb_info[ks->cpu].debuggerinfo;
+
+	/* Defensive check: kgdb_info[] must exist for this CPU */
+	if (ks->cpu < 0 || ks->cpu >= nr_cpu_ids || !cpu_online(ks->cpu)) {
+		pr_warn("kdb: CPU%d not online in kdb_common_init_state\n", ks->cpu);
+		kdb_current_task = NULL;
+		kdb_current_regs = NULL;
+		return 0;
+	}
+
+	/* The kgdb_info entry might be uninitialized; check pointers before use */
+	if (kgdb_info[ks->cpu].task)
+		kdb_current_task = kgdb_info[ks->cpu].task;
+	else
+		kdb_current_task = NULL;
+
+	if (kgdb_info[ks->cpu].debuggerinfo)
+		kdb_current_regs = kgdb_info[ks->cpu].debuggerinfo;
+	else
+		kdb_current_regs = NULL;
+
 	return 0;
 }
 
